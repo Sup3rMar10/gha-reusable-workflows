@@ -1,0 +1,46 @@
+# A reusable workflow: written once, called by other workflows (or other repos) with inputs.
+name: ci-reusable
+
+on:
+  workflow_call:
+    inputs:
+      python-version:
+        description: Python version to test with
+        type: string
+        default: "3.12"
+      run-lint:
+        type: boolean
+        default: true
+    secrets:
+      api-token:
+        required: false          # declared so a caller can pass it; this demo never uses its value
+    outputs:
+      tests-passed:
+        description: "'true' when the test step succeeded"
+        value: ${{ jobs.test.outputs.passed }}
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    outputs:
+      passed: ${{ steps.result.outputs.passed }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ inputs.python-version }}
+      - name: Lint (byte-compile)
+        if: ${{ inputs.run-lint }}
+        run: python -m compileall -q app
+      - name: Test
+        run: python -m unittest discover -s tests -v
+      - name: Token present?
+        env:
+          HAS_TOKEN: ${{ secrets.api-token != '' }}
+        run: echo "api-token provided - $HAS_TOKEN"     # never print the secret itself
+      - name: Record result
+        id: result
+        run: echo "passed=true" >> "$GITHUB_OUTPUT"

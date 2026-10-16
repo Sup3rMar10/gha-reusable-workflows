@@ -1,0 +1,32 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  py312:
+    uses: ./.github/workflows/ci-reusable.yml
+    with:
+      python-version: "3.12"
+    secrets: inherit
+
+  py313:
+    uses: ./.github/workflows/ci-reusable.yml
+    with:
+      python-version: "3.13"
+      run-lint: false
+
+  report:
+    needs: [py312, py313]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Show the outputs the reusable workflow returned
+        env:
+          A: ${{ needs.py312.outputs.tests-passed }}
+          B: ${{ needs.py313.outputs.tests-passed }}
+        run: echo "py312 passed=$A, py313 passed=$B"
